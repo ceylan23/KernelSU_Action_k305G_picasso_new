@@ -70,8 +70,17 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         mkdir clang-aosp
-        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ env.CLANG_BRANCH }}/clang-${{ env.CLANG_VERSION }}.tar.gz
-        tar -C clang-aosp/ -zxvf clang-${{ env.CLANG_VERSION }}.tar.gz
+        CLANG_URL="https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/${{ env.CLANG_BRANCH }}/clang-${{ env.CLANG_VERSION }}.tar.gz"
+        for i in 1 2 3 4 5; do
+          echo "clang download attempt $i"
+          wget -q --timeout=120 "$CLANG_URL" -O clang-${{ env.CLANG_VERSION }}-$i.tar.gz
+          if tar -tzf clang-${{ env.CLANG_VERSION }}-$i.tar.gz >/dev/null 2>&1; then
+            echo "clang archive OK"
+            tar -C clang-aosp/ -xzf clang-${{ env.CLANG_VERSION }}-$i.tar.gz
+            break
+          fi
+          echo "archive truncated, retrying..."
+        done
 
     - name: Download Custom-Clang
       if: env.USE_CUSTOM_CLANG == 'true'
@@ -151,7 +160,7 @@ jobs:
       if: env.BUILD_BOOT_IMG == 'true'
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone https://android.googlesource.com/platform/system/tools/mkbootimg tools -b master-kernel-build-2022 --depth=1
+        git clone https://android.googlesource.com/platform/system/tools/mkbootimg tools -b main-kernel --depth=1
 
     - name: Download kernel source
       run: |
